@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Canva Tracker</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 20px auto;
+        max-width: 900px;
+        padding: 0 15px;
+        background: #f5f7fa;
+        color: #333;
+      }
+      #loginOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f5f7fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      #loginBox {
+        background: white;
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        text-align: center;
+      }
+      #loginBox h2 {
+        margin-bottom: 20px;
+      }
+      #loginBox input {
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        width: 100%;
+        margin-bottom: 15px;
+        text-align: center;
+      }
+      #loginBox button {
+        padding: 12px 25px;
+        font-size: 16px;
+        background: #007bff;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        width: 100%;
+      }
+      .error-msg {
+        color: red;
+        margin-top: 10px;
+        display: none;
+      }
+      #mainApp {
+        display: none;
+      }
+      body.app-visible #loginOverlay {
+        display: none;
+      }
+      body.app-visible #mainApp {
+        display: block;
+      }
+      textarea {
+        width: 100%;
+        height: 250px;
+        padding: 12px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        resize: vertical;
+        background: #fff;
+      }
+      .buttons {
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 15px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: white;
+      }
+      button.primary {
+        background: #007bff;
+      }
+      button.export {
+        background: #28a745;
+      }
+      button.import {
+        background: #6f42c1;
+      }
+      button.clear-db {
+        background: #dc3545;
+      }
+      #fileInput {
+        display: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+      }
+      th {
+        background: #007bff;
+        color: white;
+      }
+      .empty-state {
+        color: #888;
+        padding: 20px;
+        text-align: center;
+      }
+
+      /* Loading overlay */
+      #loadingOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+      }
+      #loadingBox {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+      }
+      .spinner {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #007bff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      #loadingStatus {
+        color: #333;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loginOverlay">
+      <div id="loginBox">
+        <h2>🔐 Enter Password</h2>
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="Password"
+          autofocus
+        />
+        <button onclick="checkPassword()">Unlock</button>
+        <p class="error-msg" id="errorMsg">Wrong password</p>
+      </div>
+    </div>
+
+    <div id="loadingOverlay">
+      <div id="loadingBox">
+        <div class="spinner"></div>
+        <p id="loadingStatus">Processing...</p>
+      </div>
+    </div>
+
+    <div id="mainApp">
+      <h1>Canva Subscription Tracker</h1>
+      <p class="subtitle">
+        Paste list → Upload → Export / Import Excel (24‑hour clock)
+      </p>
+      <div class="status" id="status">Ready</div>
+
+      <textarea
+        id="inputBox"
+        placeholder="Paste your name & email list here..."
+      ></textarea>
+
+      <div class="buttons">
+        <button class="primary" onclick="processUpload()">
+          📥 Upload &amp; Process
+        </button>
+        <button class="export" onclick="exportToExcel()">
+          📊 Export to Excel
+        </button>
+        <button
+          class="import"
+          onclick="document.getElementById('fileInput').click()"
+        >
+          📂 Import Excel
+        </button>
+        <button class="clear-db" onclick="clearDatabase()">
+          🗑️ Clear All Data
+        </button>
+        <input
+          type="file"
+          id="fileInput"
+          accept=".xlsx"
+          onchange="importExcel(event)"
+        />
+      </div>
+
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>First Entry Date (24h)</th>
+            <th>Re-upload Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="4" class="empty-state">No entries yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      const PASSWORD = "123";
+      let isLoading = false;
+
+      // 24‑hour date formatter
+      function format24h(isoString) {
+        return new Date(isoString).toLocaleString(undefined, {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      }
+
+      // Loading overlay
+      function showLoading(msg = "Processing...") {
+        isLoading = true;
+        document.getElementById("loadingStatus").textContent = msg;
+        document.getElementById("loadingOverlay").style.display = "flex";
+      }
+      function hideLoading() {
+        isLoading = false;
+        document.getElementById("loadingOverlay").style.display = "none";
+      }
+      window.addEventListener("beforeunload", (e) => {
+        if (isLoading) {
+          e.preventDefault();
+          e.returnValue = "";
+        }
+      });
+
+      function apiHeaders() {
+        return {
+          "Content-Type": "application/json",
+          "x-password": PASSWORD,
+        };
+      }
+
+      function checkPassword() {
+        const input = document.getElementById("passwordInput").value;
+        if (input === PASSWORD) {
+          document.body.classList.add("app-visible");
+          loadEntries();
+        } else {
+          document.getElementById("errorMsg").style.display = "block";
+        }
+      }
+      document
+        .getElementById("passwordInput")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") checkPassword();
+        });
+
+      async function loadEntries() {
+        showLoading("Loading subscriptions...");
+        try {
+          const res = await fetch("/api/subscriptions", {
+            headers: apiHeaders(),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const entries = await res.json();
+          renderTable(entries);
+          setStatus(`Loaded ${entries.length} entries.`);
+        } catch (e) {
+          setStatus("Error: " + e.message);
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function processUpload() {
+        const text = document.getElementById("inputBox").value;
+        if (!text.trim()) return alert("Paste data first.");
+        showLoading("Uploading & processing...");
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: apiHeaders(),
+            body: JSON.stringify({ text }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const entries = await res.json();
+          renderTable(entries);
+          document.getElementById("inputBox").value = "";
+          setStatus(`Upload complete. Total: ${entries.length}`);
+        } catch (e) {
+          setStatus("Error: " + e.message);
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function exportToExcel() {
+        showLoading("Preparing Excel...");
+        try {
+          const res = await fetch("/api/subscriptions", {
+            headers: apiHeaders(),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const entries = await res.json();
+          if (!entries.length) return alert("No data.");
+
+          const sheet = [["Name", "Email", "Date of Entry", "Re-upload Count"]];
+          entries.forEach((e) => {
+            sheet.push([
+              e.name,
+              e.email,
+              format24h(e.firstEntryDate),
+              e.reUploadCount,
+            ]);
+          });
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(
+            wb,
+            XLSX.utils.aoa_to_sheet(sheet),
+            "Subscriptions",
+          );
+          XLSX.writeFile(wb, "canva_subscriptions.xlsx");
+        } catch (e) {
+          alert("Error: " + e.message);
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function importExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append("file", file);
+        showLoading("Importing data...");
+        try {
+          const res = await fetch("/api/import", {
+            method: "POST",
+            headers: { "x-password": PASSWORD },
+            body: formData,
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const entries = await res.json();
+          renderTable(entries);
+          setStatus(`Import complete. ${entries.length} entries.`);
+        } catch (e) {
+          alert("Error: " + e.message);
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function clearDatabase() {
+        if (!confirm("Delete all entries permanently?")) return;
+        showLoading("Deleting all entries...");
+        try {
+          const res = await fetch("/api/subscriptions", {
+            method: "DELETE",
+            headers: apiHeaders(),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          renderTable([]);
+          setStatus("All data cleared.");
+        } catch (e) {
+          alert("Error: " + e.message);
+        } finally {
+          hideLoading();
+        }
+      }
+
+      function renderTable(entries) {
+        const tbody = document.querySelector("#dataTable tbody");
+        if (!entries.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = entries
+          .map(
+            (e) => `
+      <tr><td>${esc(e.name)}</td><td>${esc(e.email)}</td>
+      <td>${format24h(e.firstEntryDate)}</td><td>${e.reUploadCount}</td></tr>
+    `,
+          )
+          .join("");
+      }
+
+      function esc(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+      function setStatus(msg) {
+        document.getElementById("status").textContent = msg;
+      }
+    </script>
+  </body>
+</html>
