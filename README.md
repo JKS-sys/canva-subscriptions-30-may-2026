@@ -1,6 +1,3 @@
-## ✅ Correct raw README.md (copy everything below this line)
-
-````
 # Canva Subscription Tracker
 
 A secure, multi‑platform web app to store **name & email addresses** for Canva subscriptions.
@@ -24,13 +21,13 @@ All data is stored online in **Firebase Firestore**, while sensitive credentials
 
 ## 🧱 Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Backend | Node.js + Express |
-| Database | Firebase Firestore (Admin SDK) |
-| File handling | Multer, SheetJS (`xlsx`) |
-| Environment | `dotenv` |
-| Frontend | Plain HTML/CSS/JavaScript |
+| Layer         | Technology                     |
+| ------------- | ------------------------------ |
+| Backend       | Node.js + Express              |
+| Database      | Firebase Firestore (Admin SDK) |
+| File handling | Multer, SheetJS (`xlsx`)       |
+| Environment   | `dotenv`                       |
+| Frontend      | Plain HTML/CSS/JavaScript      |
 
 ---
 
@@ -50,7 +47,7 @@ Place all project files in a folder.
 
 ```bash
 npm install
-````
+```
 
 ### 3. Set up environment variables
 
