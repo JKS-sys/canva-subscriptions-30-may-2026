@@ -166,7 +166,3 @@ your-project/
 ## 📄 License
 
 MIT – feel free to use and modify for your own needs.
-
-```
-
-```
