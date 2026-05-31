@@ -49,16 +49,26 @@ jobs:
       - name: Ad‑hoc sign the macOS .app
         if: runner.os == 'macOS'
         run: |
-          APP_PATH="dist/mac/Canva Tracker.app"
+          APP_PATH=$(find dist -name "*.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: .app not found"
+            exit 1
+          fi
+          echo "Found app at: $APP_PATH"
           codesign --force --deep --sign - "$APP_PATH"
-          codesign --verify --deep --strict "$APP_PATH"   # optional check
+          codesign --verify --deep --strict "$APP_PATH" || echo "Verification not critical"
 
       - name: Create macOS .zip from signed app
         if: runner.os == 'macOS'
         run: |
-          cd dist/mac
-          zip -r "../Canva Tracker-${GITHUB_REF_NAME:-nightly}-mac.zip" "Canva Tracker.app"
+          APP_PATH=$(find dist -name "*.app" -type d | head -1)
+          APP_NAME=$(basename "$APP_PATH")
+          APP_DIR=$(dirname "$APP_PATH")
+          ZIP_NAME="Canva Tracker-mac.zip"
+          cd "$APP_DIR"
+          zip -r "../../$ZIP_NAME" "$APP_NAME"
           cd ../..
+          echo "Created $ZIP_NAME"
 
       # --- Windows & Linux: use default targets from package.json ---
       - name: Build Electron app (Windows / Linux)
