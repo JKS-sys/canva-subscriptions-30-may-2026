@@ -25,13 +25,15 @@
     "appId": "com.canva.tracker",
     "productName": "Canva Tracker",
     "compression": "maximum",
+    "directories": {
+      "buildResources": "build"
+    },
     "files": [
       "electron-main.js",
       "server.js",
       "public/**/*",
       ".env"
     ],
-    "buildResources": "build",
     "mac": {
       "target": "dmg"
     },
