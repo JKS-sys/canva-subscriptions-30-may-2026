@@ -26,7 +26,8 @@
     "files": [
       "electron-main.js",
       "server.js",
-      "public/**/*"
+      "public/**/*",
+      ".env"
     ],
     "mac": {
       "target": "dmg"

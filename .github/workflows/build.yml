@@ -34,6 +34,12 @@ jobs:
             libgtk-3-dev libnotify-dev libnss3 libxss1 libxtst6 \
             xdg-utils libatspi2.0-dev libsecret-1-dev dpkg-dev rpm
 
+      # 🔐 Create .env from secrets (this file will be included in the build)
+      - name: Create .env file from secrets
+        run: |
+          echo "FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" >> .env
+          echo "PASSWORD_HASH=${{ secrets.PASSWORD_HASH }}" >> .env
+
       - name: Install npm dependencies
         run: npm ci
 
@@ -43,8 +49,6 @@ jobs:
         run: npx electron-builder --mac dir --publish never
         env:
           DEBUG: electron-builder
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
       - name: Ad‑hoc sign the macOS .app
         if: runner.os == 'macOS'
@@ -76,8 +80,6 @@ jobs:
         run: npx electron-builder --publish never
         env:
           DEBUG: electron-builder
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
       - name: Determine release tag
         id: get_tag
