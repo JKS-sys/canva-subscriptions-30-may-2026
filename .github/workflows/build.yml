@@ -39,21 +39,19 @@ jobs:
           node -e "
           const fs = require('fs');
           const account = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
-          // Double‑check it's valid JSON
           try { JSON.parse(account); } catch(e) { throw new Error('FIREBASE_SERVICE_ACCOUNT is invalid JSON: '+e.message); }
           const content = 'FIREBASE_SERVICE_ACCOUNT=' + JSON.stringify(account) + '\n' +
                           'PASSWORD_HASH=' + process.env.PASSWORD_HASH + '\n';
           fs.writeFileSync('.env', content);
-          console.log('.env written successfully');
           "
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
       - name: Install npm dependencies
-        run: npm ci
+        run: npm install # <-- changed from npm ci
 
-      # macOS: unpacked, ad‑hoc sign, then zip
+      # macOS build (unpacked, signed, zipped)
       - name: Build Electron app (macOS – unpacked)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac dir --publish never
@@ -65,19 +63,17 @@ jobs:
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
-          echo "Signing $APP_PATH"
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict "$APP_PATH" || echo "Verification not critical"
 
-      - name: Create macOS .zip (best compression)
+      - name: Create macOS .zip from signed app
         if: runner.os == 'macOS'
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/Canva Tracker-mac.zip"
-          echo "Created dist/Canva Tracker-mac.zip"
 
-      # Windows & Linux
+      # Windows / Linux
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never
