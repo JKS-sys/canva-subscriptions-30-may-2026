@@ -58,17 +58,17 @@ jobs:
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict "$APP_PATH" || echo "Verification not critical"
 
-      - name: Create macOS .zip from signed app
+      - name: Create macOS .zip from signed app (inside dist/)
         if: runner.os == 'macOS'
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
-          APP_NAME=$(basename "$APP_PATH")
-          APP_DIR=$(dirname "$APP_PATH")
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: .app not found"
+            exit 1
+          fi
           ZIP_NAME="Canva Tracker-mac.zip"
-          cd "$APP_DIR"
-          zip -r "../../$ZIP_NAME" "$APP_NAME"
-          cd ../..
-          echo "Created $ZIP_NAME"
+          zip -r "dist/$ZIP_NAME" "$APP_PATH"
+          echo "Created dist/$ZIP_NAME"
 
       # --- Windows & Linux: use default targets from package.json ---
       - name: Build Electron app (Windows / Linux)
