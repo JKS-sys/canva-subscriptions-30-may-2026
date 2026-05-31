@@ -5,6 +5,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write # ← allows creating releases & uploading assets
+
 jobs:
   build-and-release:
     strategy:
@@ -12,7 +15,7 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # removes Node 20 deprecation warning
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout code
@@ -34,7 +37,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # macOS → zip only (no DMG)
+      # macOS → zip (no DMG)
       - name: Build Electron app (macOS)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac zip --publish never
@@ -43,7 +46,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
-      # Windows / Linux → default targets from package.json
+      # Windows / Linux → default targets
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never
