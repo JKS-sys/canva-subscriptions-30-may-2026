@@ -33,8 +33,9 @@ jobs:
         run: npm ci
 
       - name: Build Electron app
-        run: npx electron-builder --publish never
+        run: npx electron-builder --publish never ${{ runner.os == 'macOS' && '--mac zip' || '' }}
         env:
+          DEBUG: electron-builder
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
