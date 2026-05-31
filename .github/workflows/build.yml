@@ -12,7 +12,7 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # silences Node.js 20 deprecation warning
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # removes Node 20 deprecation warning
 
     steps:
       - name: Checkout code
@@ -34,7 +34,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # --- macOS: build only .zip (NO DMG) ---
+      # macOS → zip only (no DMG)
       - name: Build Electron app (macOS)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac zip --publish never
@@ -43,7 +43,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
-      # --- Windows & Linux: use default targets from package.json ---
+      # Windows / Linux → default targets from package.json
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never
