@@ -23,6 +23,7 @@
   "build": {
     "appId": "com.canva.tracker",
     "productName": "Canva Tracker",
+    "compression": "maximum",
     "files": [
       "electron-main.js",
       "server.js",
