@@ -201,7 +201,3 @@ No permission is granted to copy, distribute, or modify the code without explici
 ---
 
 _Built with ❤️ by Jagadeesh Kumar S – passionate about lo‑fi beats, coding, and building tools that make life easier._
-
-```
-
-```
