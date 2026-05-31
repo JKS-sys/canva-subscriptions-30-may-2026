@@ -2,7 +2,8 @@ name: Build & Release Electron App
 
 on:
   push:
-    tags: ["v*"] # only run when a new tag like v1.0.0 is pushed
+    tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   release:
