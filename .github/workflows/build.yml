@@ -51,10 +51,10 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      # ===== macOS (unpacked → sign → zip) =====
-      - name: Build Electron app (macOS – unpacked)
+      # macOS: build unpacked (x64 → avoids app-builder_arm64 bug)
+      - name: Build Electron app (macOS – unpacked, x64)
         if: runner.os == 'macOS'
-        run: npx electron-builder --mac dir --publish never
+        run: npx electron-builder --mac dir --x64 --publish never
         env:
           DEBUG: electron-builder
 
