@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "electron-main.js",
   "description": "Secure Canva subscription tracker with Excel import/export",
-  "author": "Jagadeesh Kumar S",
+  "author": "Jagadeesh Kumar S <JKS.sys@icloud.com>",
   "scripts": {
     "start": "node server.js",
     "electron": "electron ."
