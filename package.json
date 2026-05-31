@@ -18,7 +18,8 @@
   },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "electron-icon-maker": "^0.0.5"
   },
   "build": {
     "appId": "com.canva.tracker",
@@ -30,6 +31,7 @@
       "public/**/*",
       ".env"
     ],
+    "buildResources": "build",
     "mac": {
       "target": "dmg"
     },

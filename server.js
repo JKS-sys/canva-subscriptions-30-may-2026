@@ -15,8 +15,22 @@ if (!EXPECTED_PASSWORD_HASH) {
   process.exit(1);
 }
 
-// 🔧 Firebase Admin
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// 🔧 Firebase Admin – validate service account JSON before parsing
+const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+if (!rawServiceAccount) {
+  console.error("FATAL: FIREBASE_SERVICE_ACCOUNT is empty");
+  process.exit(1);
+}
+try {
+  JSON.parse(rawServiceAccount);
+} catch (e) {
+  console.error(
+    "FATAL: FIREBASE_SERVICE_ACCOUNT is not valid JSON. It starts with:",
+    rawServiceAccount.substring(0, 100),
+  );
+  process.exit(1);
+}
+const serviceAccount = JSON.parse(rawServiceAccount);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -172,7 +186,7 @@ app.post("/api/import", multer().single("file"), async (req, res) => {
   }
 });
 
-// ✅ NEW: Delete a single row (by email)
+// ✅ Delete a single row (by email)
 app.delete("/api/subscriptions/:email", async (req, res) => {
   try {
     const email = req.params.email;

@@ -34,13 +34,17 @@ jobs:
             libgtk-3-dev libnotify-dev libnss3 libxss1 libxtst6 \
             xdg-utils libatspi2.0-dev libsecret-1-dev dpkg-dev rpm
 
-      # 🔐 Create .env from secrets (this file will be included in the build)
       - name: Create .env file from secrets
-        run: node -e "
+        run: |
+          node -e "
           const fs = require('fs');
-          const content = 'FIREBASE_SERVICE_ACCOUNT=' + JSON.stringify(process.env.FIREBASE_SERVICE_ACCOUNT) + '\n' +
-          'PASSWORD_HASH=' + process.env.PASSWORD_HASH + '\n';
+          const account = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+          // Double‑check it's valid JSON
+          try { JSON.parse(account); } catch(e) { throw new Error('FIREBASE_SERVICE_ACCOUNT is invalid JSON: '+e.message); }
+          const content = 'FIREBASE_SERVICE_ACCOUNT=' + JSON.stringify(account) + '\n' +
+                          'PASSWORD_HASH=' + process.env.PASSWORD_HASH + '\n';
           fs.writeFileSync('.env', content);
+          console.log('.env written successfully');
           "
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -49,7 +53,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # --- macOS: build unpacked, then ad‑hoc sign & zip ---
+      # macOS: unpacked, ad‑hoc sign, then zip
       - name: Build Electron app (macOS – unpacked)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac dir --publish never
@@ -60,27 +64,20 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: .app not found"
-            exit 1
-          fi
-          echo "Found app at: $APP_PATH"
+          if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
+          echo "Signing $APP_PATH"
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict "$APP_PATH" || echo "Verification not critical"
 
-      - name: Create macOS .zip from signed app (best compression)
+      - name: Create macOS .zip (best compression)
         if: runner.os == 'macOS'
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: .app not found"
-            exit 1
-          fi
-          # Use ditto with best compression (creates a smaller archive than standard zip)
+          if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/Canva Tracker-mac.zip"
           echo "Created dist/Canva Tracker-mac.zip"
 
-      # --- Windows & Linux: use default targets from package.json ---
+      # Windows & Linux
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never

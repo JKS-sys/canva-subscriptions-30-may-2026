@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Canva Tracker</title>
+    <link rel="icon" type="image/png" href="../build/icons/png/1024x1024.png" />
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
     <style>
       * {
@@ -18,7 +19,6 @@
         color: #333;
       }
 
-      /* Login overlay */
       #loginOverlay {
         position: fixed;
         top: 0;
@@ -66,7 +66,6 @@
         display: none;
       }
 
-      /* Offline overlay */
       #offlineOverlay {
         position: fixed;
         top: 0;
@@ -101,17 +100,6 @@
         border: none;
         border-radius: 6px;
         cursor: pointer;
-      }
-
-      /* Cache status banner */
-      #cacheBanner {
-        display: none;
-        background: #fff3cd;
-        color: #856404;
-        padding: 8px 12px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        font-size: 14px;
       }
 
       #mainApp {
@@ -200,7 +188,6 @@
         background: #c82333;
       }
 
-      /* Loading overlay */
       #loadingOverlay {
         display: none;
         position: fixed;
@@ -244,16 +231,6 @@
     </style>
   </head>
   <body>
-    <!-- Offline overlay -->
-    <div id="offlineOverlay">
-      <div id="offlineBox">
-        <h2>⚠️ No Internet Connection</h2>
-        <p>Please check your connection and try again.</p>
-        <button onclick="location.reload()">Retry</button>
-      </div>
-    </div>
-
-    <!-- Login overlay -->
     <div id="loginOverlay">
       <div id="loginBox">
         <h2>🔐 Enter Password</h2>
@@ -268,7 +245,14 @@
       </div>
     </div>
 
-    <!-- Loading overlay -->
+    <div id="offlineOverlay">
+      <div id="offlineBox">
+        <h2>⚠️ No Internet Connection</h2>
+        <p>Please check your connection and try again.</p>
+        <button onclick="location.reload()">Retry</button>
+      </div>
+    </div>
+
     <div id="loadingOverlay">
       <div id="loadingBox">
         <div class="spinner"></div>
@@ -276,13 +260,23 @@
       </div>
     </div>
 
-    <!-- Main app -->
     <div id="mainApp">
       <h1>Canva Subscription Tracker</h1>
       <p class="subtitle">
         Paste list → Upload → Export / Import Excel (24‑hour clock)
       </p>
-      <div id="cacheBanner">
+      <div
+        id="cacheBanner"
+        style="
+          display: none;
+          background: #fff3cd;
+          color: #856404;
+          padding: 8px 12px;
+          margin-bottom: 10px;
+          border-radius: 4px;
+          font-size: 14px;
+        "
+      >
         ⚠️ Showing cached data – unable to reach server.
       </div>
       <div class="status" id="status">Ready</div>
@@ -338,8 +332,10 @@
       const PASSWORD = "123";
       let isLoading = false;
       let loadingTimer = null;
+      const CACHE_KEY = "canva_entries_cache";
+      const CACHE_TIME_KEY = "canva_cache_time";
 
-      // ---------- Offline detection ----------
+      // Offline detection
       const offlineOverlay = document.getElementById("offlineOverlay");
       function updateOfflineStatus() {
         offlineOverlay.style.display = navigator.onLine ? "none" : "flex";
@@ -348,10 +344,7 @@
       window.addEventListener("offline", updateOfflineStatus);
       updateOfflineStatus();
 
-      // ---------- Cache helpers ----------
-      const CACHE_KEY = "canva_entries_cache";
-      const CACHE_TIME_KEY = "canva_cache_time";
-
+      // Cache helpers
       function getCachedEntries() {
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return null;
@@ -361,29 +354,27 @@
           return null;
         }
       }
-
       function saveCache(entries) {
         localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
         localStorage.setItem(CACHE_TIME_KEY, new Date().toISOString());
       }
-
       function clearCache() {
         localStorage.removeItem(CACHE_KEY);
         localStorage.removeItem(CACHE_TIME_KEY);
       }
 
-      // Show cached data immediately if available
       function showCachedIfAvailable() {
         const cached = getCachedEntries();
         if (cached && cached.length) {
           renderTable(cached);
+          document.getElementById("cacheBanner").style.display = "block";
           setStatus(
             `Showing cached data (${cached.length} entries). Refreshing…`,
           );
         }
       }
 
-      // ---------- Loading overlay (with delay) ----------
+      // Loading overlay with delay
       function showLoading(msg = "Processing...") {
         if (loadingTimer) clearTimeout(loadingTimer);
         loadingTimer = setTimeout(() => {
@@ -392,13 +383,11 @@
           document.getElementById("loadingOverlay").style.display = "flex";
         }, 400);
       }
-
       function hideLoading() {
         if (loadingTimer) clearTimeout(loadingTimer);
         isLoading = false;
         document.getElementById("loadingOverlay").style.display = "none";
       }
-
       window.addEventListener("beforeunload", (e) => {
         if (isLoading) {
           e.preventDefault();
@@ -414,12 +403,8 @@
         return true;
       }
 
-      // ---------- API helpers ----------
       function apiHeaders() {
-        return {
-          "Content-Type": "application/json",
-          "x-password": PASSWORD,
-        };
+        return { "Content-Type": "application/json", "x-password": PASSWORD };
       }
 
       function format24h(isoString) {
@@ -433,15 +418,14 @@
         });
       }
 
-      // ---------- Login ----------
+      // Login
       function checkPassword() {
         if (!requireOnline()) return;
         const input = document.getElementById("passwordInput").value;
         if (input === PASSWORD) {
           document.body.classList.add("app-visible");
-          // Show cached data instantly while fetching fresh data
           showCachedIfAvailable();
-          loadEntries(); // fetches fresh and updates cache
+          loadEntries();
         } else {
           document.getElementById("errorMsg").style.display = "block";
         }
@@ -452,27 +436,17 @@
           if (e.key === "Enter") checkPassword();
         });
 
-      // ---------- Core data loading with cache ----------
+      // Data functions
       async function loadEntries() {
         if (!requireOnline()) {
-          // offline: just show cached data
           const cached = getCachedEntries();
           if (cached) {
             renderTable(cached);
-            document.getElementById("cacheBanner").style.display = "block";
-            setStatus(
-              `Offline – showing cached data (${cached.length} entries).`,
-            );
-          } else {
-            setStatus(
-              "No cached data available. Please connect to the internet.",
-            );
+            setStatus("Offline – cached data.");
           }
           return;
         }
-
-        // Online: fetch fresh data
-        showLoading("Loading subscriptions…");
+        showLoading("Loading…");
         try {
           const res = await fetch("/api/subscriptions", {
             headers: apiHeaders(),
@@ -484,17 +458,11 @@
           document.getElementById("cacheBanner").style.display = "none";
           setStatus(`Loaded ${entries.length} entries.`);
         } catch (e) {
-          // Network error -> fallback to cache
           const cached = getCachedEntries();
           if (cached) {
             renderTable(cached);
-            document.getElementById("cacheBanner").style.display = "block";
-            setStatus(
-              `Offline – showing cached data (${cached.length} entries).`,
-            );
-          } else {
-            setStatus("Error loading data. No cached data available.");
-          }
+            setStatus("Offline – cached data.");
+          } else setStatus("Error: " + e.message);
         } finally {
           hideLoading();
         }
@@ -504,7 +472,7 @@
         if (!requireOnline()) return;
         const text = document.getElementById("inputBox").value;
         if (!text.trim()) return alert("Paste data first.");
-        showLoading("Uploading & processing...");
+        showLoading("Uploading…");
         try {
           const res = await fetch("/api/upload", {
             method: "POST",
@@ -516,22 +484,15 @@
           saveCache(entries);
           renderTable(entries);
           document.getElementById("inputBox").value = "";
-          document.getElementById("cacheBanner").style.display = "none";
           setStatus(`Upload complete. Total: ${entries.length}`);
         } catch (e) {
-          if (e instanceof TypeError && e.message === "Failed to fetch") {
-            updateOfflineStatus();
-            setStatus("Network error.");
-          } else {
-            setStatus("Error: " + e.message);
-          }
+          setStatus("Error: " + e.message);
         } finally {
           hideLoading();
         }
       }
 
       async function exportToExcel() {
-        // Prefer cached data if offline, else fetch
         let entries = getCachedEntries();
         if (navigator.onLine) {
           try {
@@ -541,8 +502,7 @@
             if (res.ok) entries = await res.json();
           } catch {}
         }
-        if (!entries || !entries.length) return alert("No data to export.");
-
+        if (!entries || !entries.length) return alert("No data.");
         const sheet = [["Name", "Email", "Date of Entry", "Re-upload Count"]];
         entries.forEach((e) =>
           sheet.push([
@@ -567,7 +527,7 @@
         if (!file) return;
         const formData = new FormData();
         formData.append("file", file);
-        showLoading("Importing data...");
+        showLoading("Importing…");
         try {
           const res = await fetch("/api/import", {
             method: "POST",
@@ -578,15 +538,9 @@
           const entries = await res.json();
           saveCache(entries);
           renderTable(entries);
-          document.getElementById("cacheBanner").style.display = "none";
           setStatus(`Import complete. ${entries.length} entries.`);
         } catch (e) {
-          if (e instanceof TypeError && e.message === "Failed to fetch") {
-            updateOfflineStatus();
-            setStatus("Network error.");
-          } else {
-            alert("Error: " + e.message);
-          }
+          alert("Error: " + e.message);
         } finally {
           hideLoading();
         }
@@ -595,7 +549,7 @@
       async function clearDatabase() {
         if (!requireOnline()) return;
         if (!confirm("Delete all entries permanently?")) return;
-        showLoading("Deleting all entries...");
+        showLoading("Deleting…");
         try {
           const res = await fetch("/api/subscriptions", {
             method: "DELETE",
@@ -606,12 +560,7 @@
           renderTable([]);
           setStatus("All data cleared.");
         } catch (e) {
-          if (e instanceof TypeError && e.message === "Failed to fetch") {
-            updateOfflineStatus();
-            setStatus("Network error.");
-          } else {
-            alert("Error: " + e.message);
-          }
+          alert("Error: " + e.message);
         } finally {
           hideLoading();
         }
@@ -619,32 +568,22 @@
 
       async function deleteEntry(email) {
         if (!requireOnline()) return;
-        if (!confirm(`Delete entry: ${email}?`)) return;
-        showLoading(`Deleting ${email}...`);
+        if (!confirm(`Delete ${email}?`)) return;
+        showLoading("Deleting…");
         try {
           const res = await fetch(
             `/api/subscriptions/${encodeURIComponent(email)}`,
-            {
-              method: "DELETE",
-              headers: apiHeaders(),
-            },
+            { method: "DELETE", headers: apiHeaders() },
           );
           if (!res.ok) throw new Error(await res.text());
-          // Reload fresh data (which also updates cache)
           await loadEntries();
         } catch (e) {
-          if (e instanceof TypeError && e.message === "Failed to fetch") {
-            updateOfflineStatus();
-            alert("No internet connection.");
-          } else {
-            alert("Error: " + e.message);
-          }
+          alert("Error: " + e.message);
         } finally {
           hideLoading();
         }
       }
 
-      // ---------- Render ----------
       function renderTable(entries) {
         const tbody = document.querySelector("#dataTable tbody");
         if (!entries.length) {
@@ -656,10 +595,8 @@
           .map(
             (e) => `
       <tr>
-        <td>${esc(e.name)}</td>
-        <td>${esc(e.email)}</td>
-        <td>${format24h(e.firstEntryDate)}</td>
-        <td>${e.reUploadCount}</td>
+        <td>${esc(e.name)}</td><td>${esc(e.email)}</td>
+        <td>${format24h(e.firstEntryDate)}</td><td>${e.reUploadCount}</td>
         <td><button class="delete-btn" onclick="deleteEntry('${esc(e.email)}')">🗑️ Delete</button></td>
       </tr>
     `,
