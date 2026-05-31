@@ -49,12 +49,12 @@ jobs:
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
       - name: Install npm dependencies
-        run: npm install # <-- changed from npm ci
+        run: npm install
 
-      # macOS build (unpacked, signed, zipped)
-      - name: Build Electron app (macOS – zip)
+      # ===== macOS (unpacked → sign → zip) =====
+      - name: Build Electron app (macOS – unpacked)
         if: runner.os == 'macOS'
-        run: npx electron-builder --mac zip --publish never
+        run: npx electron-builder --mac dir --publish never
         env:
           DEBUG: electron-builder
 
@@ -63,23 +63,26 @@ jobs:
         run: |
           APP_PATH=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
+          echo "Signing $APP_PATH"
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict "$APP_PATH" || echo "Verification not critical"
 
-            # macOS: build as .zip (no DMG to avoid retry failures)
-      - name: Build Electron app (macOS – zip)
+      - name: Create macOS .zip from signed app
         if: runner.os == 'macOS'
-        run: npx electron-builder --mac zip --publish never
-        env:
-          DEBUG: electron-builder
+        run: |
+          APP_PATH=$(find dist -name "*.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then echo "Error: .app not found"; exit 1; fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/Canva Tracker-mac.zip"
+          echo "Created dist/Canva Tracker-mac.zip"
 
-      # Windows / Linux
+      # ===== Windows & Linux =====
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never
         env:
           DEBUG: electron-builder
 
+      # ===== Release =====
       - name: Determine release tag
         id: get_tag
         run: |
