@@ -36,9 +36,15 @@ jobs:
 
       # 🔐 Create .env from secrets (this file will be included in the build)
       - name: Create .env file from secrets
-        run: |
-          echo "FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" >> .env
-          echo "PASSWORD_HASH=${{ secrets.PASSWORD_HASH }}" >> .env
+        run: node -e "
+          const fs = require('fs');
+          const content = 'FIREBASE_SERVICE_ACCOUNT=' + JSON.stringify(process.env.FIREBASE_SERVICE_ACCOUNT) + '\n' +
+          'PASSWORD_HASH=' + process.env.PASSWORD_HASH + '\n';
+          fs.writeFileSync('.env', content);
+          "
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
       - name: Install npm dependencies
         run: npm ci
