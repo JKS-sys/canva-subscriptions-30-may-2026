@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # ← allows creating releases & uploading assets
+  contents: write
 
 jobs:
   build-and-release:
@@ -37,16 +37,30 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # macOS → zip (no DMG)
-      - name: Build Electron app (macOS)
+      # --- macOS: build unpacked, then ad‑hoc sign & zip ---
+      - name: Build Electron app (macOS – unpacked)
         if: runner.os == 'macOS'
-        run: npx electron-builder --mac zip --publish never
+        run: npx electron-builder --mac dir --publish never
         env:
           DEBUG: electron-builder
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
 
-      # Windows / Linux → default targets
+      - name: Ad‑hoc sign the macOS .app
+        if: runner.os == 'macOS'
+        run: |
+          APP_PATH="dist/mac/Canva Tracker.app"
+          codesign --force --deep --sign - "$APP_PATH"
+          codesign --verify --deep --strict "$APP_PATH"   # optional check
+
+      - name: Create macOS .zip from signed app
+        if: runner.os == 'macOS'
+        run: |
+          cd dist/mac
+          zip -r "../Canva Tracker-${GITHUB_REF_NAME:-nightly}-mac.zip" "Canva Tracker.app"
+          cd ../..
+
+      # --- Windows & Linux: use default targets from package.json ---
       - name: Build Electron app (Windows / Linux)
         if: runner.os != 'macOS'
         run: npx electron-builder --publish never
