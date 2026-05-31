@@ -1,7 +1,7 @@
-# Canva Subscription Tracker
+# Canva Subscription Tracker – by Jagadeesh Kumar S
 
-A secure, multi‑platform web app to store **name & email addresses** for Canva subscriptions.
-It automatically counts **re‑uploads** of the same pair, records the **first entry date** (in 24‑hour format), and lets you **export/import** the data as an Excel file.
+A secure, multi‑platform web app to store **name & email addresses** for Canva subscriptions.  
+It automatically counts **re‑uploads** of the same pair, records the **first entry date** (in 24‑hour format), and lets you **export/import** the data as an Excel file.  
 All data is stored online in **Firebase Firestore**, while sensitive credentials stay hidden on the backend.
 
 ---
@@ -16,6 +16,8 @@ All data is stored online in **Firebase Firestore**, while sensitive credentials
 - ⏳ **Progress indicator** – A loading overlay prevents accidental tab close / refresh during uploads or imports.
 - 🛡️ **Secure architecture** – Firebase Admin credentials are **never** sent to the browser. The password hash is stored only on the server (in `.env`).
 - 🌐 **Multi‑platform** – Works on desktop, tablet, and mobile (any modern browser).
+- 💻 **Desktop app** – Native Electron app for macOS, Windows, and Linux (packaged with `electron-builder`).
+- 📱 **PWA ready** – Installable on iOS and Android home screens.
 
 ---
 
@@ -28,6 +30,7 @@ All data is stored online in **Firebase Firestore**, while sensitive credentials
 | File handling | Multer, SheetJS (`xlsx`)       |
 | Environment   | `dotenv`                       |
 | Frontend      | Plain HTML/CSS/JavaScript      |
+| Desktop       | Electron + electron‑builder    |
 
 ---
 
@@ -58,9 +61,9 @@ FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"canva-tracker",
 PASSWORD_HASH=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
 ```
 
-- `FIREBASE_SERVICE_ACCOUNT` – the **minified one‑line JSON** of your Firebase service account key.  
+- `FIREBASE_SERVICE_ACCOUNT` – the **minified one‑line JSON** of your Firebase service account key.
   (Open the downloaded JSON, remove all line breaks, and paste as a single string.)
-- `PASSWORD_HASH` – the **SHA‑256 hash** of the password you want to use (default `a665a4...` corresponds to `123`).  
+- `PASSWORD_HASH` – the **SHA‑256 hash** of the password you want to use (default `a665a4...` corresponds to `123`).
   To generate a hash for a different password, run:
   ```bash
   node -e "console.log(require('crypto').createHash('sha256').update('YOUR_PASSWORD').digest('hex'))"
@@ -72,13 +75,32 @@ PASSWORD_HASH=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
 npm start
 ```
 
-The app will be available at:  
+The app will be available at:
 **`http://localhost:3000`**
 
 ### 5. Log in
 
-Enter the password (`123` if you kept the default hash).  
+Enter the password (`123` if you kept the default hash).
 The main tracker interface appears.
+
+---
+
+## 🖥️ Desktop App (Electron)
+
+To run the native desktop version:
+
+```bash
+npm run electron
+```
+
+It automatically picks a free port and opens in a standalone window.
+To package the app for distribution (macOS, Windows, Linux):
+
+```bash
+npx electron-builder
+```
+
+The output will be in the `dist/` folder.
 
 ---
 
@@ -86,7 +108,7 @@ The main tracker interface appears.
 
 ### Paste & Upload
 
-1. Copy your list of name‑email pairs in the format you already use.  
+1. Copy your list of name‑email pairs in the format you already use.
    Example:
 
    ```
@@ -108,12 +130,16 @@ Click **📊 Export to Excel** – a file `canva_subscriptions.xlsx` downloads w
 
 ### Import Excel
 
-Click **📂 Import Excel**, choose a previously exported `.xlsx` file.  
+Click **📂 Import Excel**, choose a previously exported `.xlsx` file.
 ⚠️ **This replaces ALL current data** with the contents of the file.
 
 ### Clear All Data
 
 Click **🗑️ Clear All Data** – after confirmation, the entire online database is deleted.
+
+### Delete a Single Entry
+
+Each row has a red **🗑️ Delete** button. Click it to remove that specific subscription permanently.
 
 ---
 
@@ -123,18 +149,20 @@ Click **🗑️ Clear All Data** – after confirmation, the entire online datab
 - The **password hash** is kept only on the server (in `.env`). The browser sends the plain password, which the server hashes and compares – the actual hash is never in the frontend source code.
 - All API routes are protected – a valid password must be sent in the `x-password` header.
 - Use **HTTPS** when deploying to a public URL to encrypt all traffic.
+- The Electron app loads credentials only at runtime – they are **not embedded** in the packaged executable (if you exclude `.env` from the build).
 
 ---
 
 ## 🐞 Troubleshooting
 
 | Issue                              | Solution                                                                                                                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
 | **Favicon 404** in browser console | Harmless – the server returns a `204 No Content` for `/favicon.ico`. Clear browser cache if the 404 persists.                                                                  |
 | **401 Unauthorized**               | Wrong password, or `PASSWORD_HASH` in `.env` doesn’t match the password you entered. Double‑check both.                                                                        |
 | **500 Internal Server Error**      | Check the server terminal for errors. The most common cause is missing `protobufjs` – run `npm install protobufjs`. Also ensure Firestore is enabled in your Firebase project. |
 | **Data not loading**               | Make sure your Firestore database has the correct security rules. For a personal project you can use `allow read, write: if true;` (but be careful with public exposure).      |
 | **`MODULE_NOT_FOUND`**             | Run `npm install` again to ensure all dependencies are installed.                                                                                                              |
+| **`EADDRINUSE`** (port in use)     | Kill the existing process: `lsof -ti:3000                                                                                                                                      | xargs kill -9` |
 
 ---
 
@@ -156,6 +184,7 @@ your-project/
 ├── .gitignore
 ├── package.json
 ├── server.js
+├── electron-main.js      (Electron entry point)
 ├── public/
 │   └── index.html
 └── README.md
@@ -163,6 +192,16 @@ your-project/
 
 ---
 
-## 📄 License
+## ©️ Copyright & Ownership
 
-MIT – feel free to use and modify for your own needs.
+**© 2026 Jagadeesh Kumar S.** All rights reserved.
+This software is **proprietary** – it is not open source.
+No permission is granted to copy, distribute, or modify the code without explicit written consent from the owner.
+
+---
+
+_Built with ❤️ by Jagadeesh Kumar S – passionate about lo‑fi beats, coding, and building tools that make life easier._
+
+```
+
+```

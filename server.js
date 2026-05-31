@@ -1,11 +1,11 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const multer = require("multer");
 const XLSX = require("xlsx");
-const path = require("path");
-const crypto = require("crypto"); // built-in, no install needed
+const crypto = require("crypto");
 
 // 🔐 Read the expected hash from .env (never sent to browser)
 const EXPECTED_PASSWORD_HASH = process.env.PASSWORD_HASH;
@@ -39,10 +39,7 @@ function requirePassword(req, res, next) {
   if (!plainPassword) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-
-  // Hash the incoming plain password using SHA-256
   const hash = crypto.createHash("sha256").update(plainPassword).digest("hex");
-
   if (hash !== EXPECTED_PASSWORD_HASH) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -51,7 +48,7 @@ function requirePassword(req, res, next) {
 
 app.use("/api", requirePassword);
 
-// ---------- API Routes (unchanged logic) ----------
+// ---------- API Routes ----------
 app.get("/api/subscriptions", async (req, res) => {
   try {
     const snapshot = await subscriptionsCollection.orderBy("name").get();
@@ -175,6 +172,24 @@ app.post("/api/import", multer().single("file"), async (req, res) => {
   }
 });
 
+// ✅ NEW: Delete a single row (by email)
+app.delete("/api/subscriptions/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const docRef = subscriptionsCollection.doc(email);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+    await docRef.delete();
+    res.json({ success: true });
+  } catch (e) {
+    console.error("❌ Delete error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bulk delete (keep as is)
 app.delete("/api/subscriptions", async (req, res) => {
   try {
     const snap = await subscriptionsCollection.get();
@@ -218,5 +233,11 @@ function parseNameEmailPairs(text) {
   return pairs;
 }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Export the app for Electron
+module.exports = app;
+
+// Start the server only when run directly (not required by Electron)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
