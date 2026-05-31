@@ -32,8 +32,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build Electron app
-        run: npx electron-builder --publish never ${{ runner.os == 'macOS' && '--mac zip' || '' }}
+      # --- macOS: build only .zip (NO DMG) ---
+      - name: Build Electron app (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac zip --publish never
+        env:
+          DEBUG: electron-builder
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
+
+      # --- Windows & Linux: use default targets from package.json ---
+      - name: Build Electron app (Windows / Linux)
+        if: runner.os != 'macOS'
+        run: npx electron-builder --publish never
         env:
           DEBUG: electron-builder
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
